@@ -1,0 +1,35 @@
+{
+  "name": "timeless-mucha-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanycw/timeless-mucha-core.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ryanycw/timeless-mucha-core/issues"
+  },
+  "homepage": "https://github.com/ryanycw/timeless-mucha-core#readme",
+  "devDependencies": {
+    "@nomiclabs/hardhat-etherscan": "^3.0.4",
+    "@nomiclabs/hardhat-truffle5": "^2.0.6",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@openzeppelin/contracts": "^4.6.0",
+    "@openzeppelin/hardhat-upgrades": "^1.19.0",
+    "@openzeppelin/test-helpers": "^0.5.15",
+    "dotenv": "^16.0.1",
+    "erc721a": "^4.0.0",
+    "ethers": "^5.6.8",
+    "hardhat": "^2.9.7",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.7.21",
+    "web3": "^1.7.3"
+  }
+}
