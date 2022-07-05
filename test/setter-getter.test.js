@@ -269,7 +269,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 10),
-                "NotAuthorized()"
+                'Ownable: caller is not the owner'
             );
 
             await genesisPaperToken.connect(owner).setAuthorized(addr1.address, true);
@@ -277,7 +277,7 @@ describe("Timeless  Mucha", function() {
             const authorizedStatus = await genesisPaperToken.isAuthorized(addr1.address);
             expect(authorizedStatus).to.be.true;
 
-            await genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
+            await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
             await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
             const price1 = await genesisPaperToken.getDutchAuctionPrice();
             expect(ethers.utils.formatEther(price1)).to.be.equal('0.1');
@@ -321,7 +321,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 10),
-                "NotAuthorized()"
+                'Ownable: caller is not the owner'
             );
 
             await genesisPaperToken.connect(owner).setAuthorized(addr1.address, true);
@@ -339,7 +339,7 @@ describe("Timeless  Mucha", function() {
                 "InvalidInput()"
             );
 
-            await genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
+            await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
             await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
 
             await expectRevert(
@@ -402,7 +402,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 10),
-                "NotAuthorized()"
+                'Ownable: caller is not the owner'
             );
 
             await genesisPaperToken.connect(owner).setAuthorized(addr1.address, true);
@@ -420,7 +420,7 @@ describe("Timeless  Mucha", function() {
                 "InvalidInput()"
             );
 
-            await genesisPaperToken.connect(addr1).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
+            await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
             await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
 
             await expectRevert(

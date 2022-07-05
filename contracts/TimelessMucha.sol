@@ -666,7 +666,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
     ) 
         external
         override
-        onlyAuthorized 
+        onlyOwner
     {
         if (newDutchAuctionStartPrice < newDutchAuctionEndPrice) {
             revert InvalidInput();
