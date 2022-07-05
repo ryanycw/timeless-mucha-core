@@ -1,7 +1,6 @@
 require("dotenv/config");
 const fs = require('fs');
 const utils = require("../helpers/utils");
-const sign = require("../helpers/signature")
 const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const { expect } = require("hardhat");
 
