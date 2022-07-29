@@ -1,3 +1,5 @@
+*coverage.json
+*package-lock.json
 *hardhat.config.js
 /artifacts
 /bin
