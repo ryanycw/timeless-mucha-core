@@ -1,6 +1,7 @@
 *coverage.json
 *package-lock.json
 *hardhat.config.js
+/.vscode
 /artifacts
 /bin
 /cache
