@@ -517,6 +517,10 @@ contract TimelessMucha is
         override
         onlyAuthorized
     {
+        if (maxGenesisPapersTierAmount == 0) { 
+            revert SalesInfoUnset();
+        }
+
         if (newWhitelistMintStartTimestamp > newWhitelistMintEndTimestamp) {
             revert InvalidInput();
         }
@@ -557,7 +561,11 @@ contract TimelessMucha is
         external
         override
         onlyAuthorized
-    {        
+    {
+        if (maxGenesisPapersTierAmount == 0) { 
+            revert SalesInfoUnset();
+        }
+
         if (newPublicMintStartTimestamp > newPublicMintEndTimestamp) {
             revert InvalidInput();
         }
@@ -599,6 +607,10 @@ contract TimelessMucha is
         override
         onlyAuthorized
     {
+        if (maxGenesisPapersTierAmount == 0) { 
+            revert SalesInfoUnset();
+        }
+
         if (genesisPapersAuctionSaleTimeStep == 0 ||
             genesisPapersAuctionSaleStartPrice == 0 ||
             genesisPapersAuctionSaleEndPrice == 0 ||
@@ -660,14 +672,17 @@ contract TimelessMucha is
         if (newDutchAuctionStartPrice < newDutchAuctionEndPrice) {
             revert InvalidInput();
         }
+
         if (newDutchAuctionStartPrice != newDutchAuctionEndPrice.add(newDutchAuctionMaxStepAmount.mul(newDutchAuctionPriceStep))) {
             revert InvalidInput();
         }
+
         if (block.timestamp >= dutchAuctionMintStartTimestamp &&
             block.timestamp <= dutchAuctionMintEndTimestamp
         ) {
             revert DuringSales();
         }
+
         genesisPapersAuctionSaleTimeStep = newDutchAuctionTimestep;
         genesisPapersAuctionSaleStartPrice = newDutchAuctionStartPrice;
         genesisPapersAuctionSaleEndPrice = newDutchAuctionEndPrice;
@@ -953,15 +968,11 @@ contract TimelessMucha is
         override
         onlyOwner
     {
-        if (newMaxGenesisPapersTierAmount == 0) { 
+        if (newMaxGenesisPapersTierAmount > maxGenesisPapersAmount) { 
             revert InvalidInput();
         }
 
-        if (maxGenesisPapersTierAmount > maxGenesisPapersAmount) { 
-            revert InvalidInput();
-        }
-
-        if (maxGenesisPapersTierAmount < totalSupply()) {
+        if (newMaxGenesisPapersTierAmount < totalSupply()) {
             revert InvalidInput();
         }
 
