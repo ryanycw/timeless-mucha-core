@@ -37,8 +37,6 @@ interface ITimelessMucha {
    // Info Getters Functions //
   ////////////////////////////
 
-  // Get all the tokenIds of an address.
-  function tokensOfOwner(address owner) external view returns(uint256[] memory tokenIds);
   // Get the current price of the dutch auction sale.
   function getDutchAuctionPrice() external view returns (uint256 price);
   // Get true if a paper was printed, false otherwise.
@@ -59,15 +57,15 @@ interface ITimelessMucha {
   /////////////////////////
 
   // Set the variables to enable the whitelist mint phase by owner.
-  function setWhitelistMintPhase(uint256 newWhitelistMintStartTimestamp, uint256 newWhitelistMintEndTimestamp, bool newWhitelistMintEnableStatus) external;
+  function setWhitelistMintPhase(uint256 newWhitelistMintStartTimestamp, uint256 newWhitelistMintEndTimestamp) external;
   // Set the variables to enable the public mint phase by owner.
-  function setPublicMintPhase(uint256 newPublicMintStartTimestamp, uint256 newPublicMintEndTimestamp, bool newPublicMintEnableStatus) external;
+  function setPublicMintPhase(uint256 newPublicMintStartTimestamp, uint256 newPublicMintEndTimestamp) external;
   // Set the variables to enable the dutch auction sale phase by owner.
-  function setDutchAuctionMintPhase(uint256 newDutchAuctionMintStartTimestamp, uint256 newDutchAuctionMintEndTimestamp, bool newDutchAuctionMintStatus) external;
+  function setDutchAuctionMintPhase(uint256 newDutchAuctionMintStartTimestamp, uint256 newDutchAuctionMintEndTimestamp) external;
   // Set the sale-related variables used in the dutch auction sale by owner.
-  function setDutchAuctionSaleInfo(uint256 newDutchAuctionTimestep, uint256 newDutchAuctionStartPrice, uint newDutchAuctionEndPrice, uint256 newDutchAuctionPriceStep, uint256 newDutchAuctionMaxStepAmount) external;
+  function setDutchAuctionSaleInfo(uint256 newDutchAuctionTimestep, uint256 newDutchAuctionStartPrice, uint256 newDutchAuctionEndPrice, uint256 newDutchAuctionPriceStep, uint256 newDutchAuctionMaxStepAmount) external;
   // Set the variables to enable the print phase by owner.
-  function setPrintPhase(uint256 newPrintStartTimestamp, uint256 newPrintEndTimestamp, bool newPrintEnableStatus) external;
+  function setPrintPhase(uint256 newPrintStartTimestamp, uint256 newPrintEndTimestamp) external;
 
     ////////////////////////////////////////
    // Set Roles & Token Status Functions //
@@ -107,11 +105,11 @@ interface ITimelessMucha {
   // Set the price of the genesis paper tokens.
   function setGenesisPapersPrice(uint256 newPrice) external;
   // Set the maximum total amount of genesis paper tokens.
-  function setMaxGenesisPapersAmount(uint256 newMaxMuchaPapersAmount) external;
+  function setMaxGenesisPapersAmount(uint256 newMaxGenesisPapersAmount) external;
   // Set the maximum limit amount of each sales phase.
-  function setMaxGenesisPapersTierAmount(uint256 newMaxMuchaPapersTierAmount) external;
+  function setMaxGenesisPapersTierAmount(uint256 newMaxGenesisPapersTierAmount) external;
   // Set the maximum limit amount of a single transaction.
-  function setMaxGenesisPapersPerTx(uint256 newMaxMuchaPapersPerTx) external;
+  function setMaxGenesisPapersPerTx(uint256 newMaxGenesisPapersPerTx) external;
   // Set the address to transfer the contract fund to.
   function setTreasury(address newTreasuryAddress) external;
 
@@ -125,4 +123,22 @@ interface ITimelessMucha {
   event MintGenesisPaper(address owner, uint256 quantity, uint256 totalSupply);
   // This event is triggered whenever a call to #printGenesisPapers succeeds.
   event PrintGenesisPaper(uint256 tokenId);
+  // This event is triggered whenever a call to #setWhitelistMintPhase succeeds.
+  event WhitelistMintPhaseSet(uint256 newWhitelistMintStartTimestamp, uint256 newWhitelistMintEndTimestamp);
+  // This event is triggered whenever a call to #setPublicMintPhase succeeds.
+  event PublicMintPhaseSet(uint256 newPublicMintStartTimestamp, uint256 newPublicMintEndTimestamp);
+  // This event is triggered whenever a call to #setDutchAuctionMintPhase succeeds.
+  event DutchAuctionMintPhaseSet(uint256 newDutchAuctionMintStartTimestamp, uint256 newDutchAuctionMintEndTimestamp);
+  // This event is triggered whenever a call to #setDutchAuctionSaleInfo succeeds.
+  event DutchAuctionSaleInfoSet(uint256 newDutchAuctionTimestep, uint256 newDutchAuctionStartPrice, uint256 newDutchAuctionEndPrice, uint256 newDutchAuctionPriceStep, uint256 newDutchAuctionMaxStepAmount);
+  // This event is triggered whenever a call to #setPrintPhase succeeds.
+  event PrintPhaseSet(uint256 newPrintStartTimestamp, uint256 newPrintEndTimestamp);
+  // This event is triggered whenever a call to #setGenesisPapersPrice succeeds.
+  event GenesisPapersPriceSet(uint256 newPrice);
+  // This event is triggered whenever a call to #setMaxGenesisPapersAmount succeeds.
+  event GenesisPaperMaxAmountSet(uint256 newMaxGenesisPapersAmount);
+  // This event is triggered whenever a call to #setMaxGenesisPapersTierAmount succeeds.
+  event GenesisPaperMaxTierAmountSet(uint256 newMaxGenesisPapersTierAmount);
+  // This event is triggered whenever a call to #setMaxGenesisPapersPerTx succeeds.
+  event GenesisPaperMaxPerTxAmountSet(uint256 newMaxGenesisPapersPerTx);
 }

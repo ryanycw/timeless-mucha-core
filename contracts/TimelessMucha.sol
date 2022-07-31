@@ -1,52 +1,51 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
-
-import "hardhat/console.sol";
+pragma solidity 0.8.4;
 
 import "./interfaces/ITimelessMucha.sol";
-import "./libraries/ERC721A.sol";
+import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 error TreasuryNotSet();
 error ExceedMaxGenesisPapers();
 error ExceedMaxTierGenesisPapers();
-error ExceedMaxPrintableAount();
+error ExceedMaxPrintableAmount();
 error NotStarted();
 error Ended();
-error Inactive();
 error DuringSales();
 error CallerIsNotUser();
 error InvalidSignature();
-error ZeroQuantity();
 error MintTooManyInOneTx();
 error NotEnoughQuota();
-error NotEnoughETH();
+error InvalidAmountETH();
 error NotTokenOwner();
 error AlreadyPrinted();
 error NotAuthorized();
 error InvalidInput();
 error ZeroAddress();
+error SalesInfoUnset();
 error InvalidToken();
 error TokenNotExist();
 
 contract TimelessMuchaStorage is IPaper {
+
     mapping(address => uint256) public whitelistMinted;
-    mapping(uint256 => PaperInfo) public PaperItem;
+    mapping(uint256 => PaperInfo) public paperItem;
     mapping(uint256 => uint256) public artworkPrintedAmount;
     mapping(uint256 => uint256) public editionLimitAmount;
     mapping(address => bool) public isAuthorized;
     mapping(address => bool) public isSigner;
     BitMaps.BitMap internal isTokenInvalid;
 
-    uint256 public MAX_GENESISPAPERS_AMOUNT;
-    uint256 public MAX_GENESISPAPERS_TIERAMOUNT;
-    uint256 public MAX_GENESISPAPERS_PERTX;
-    uint256 public GENESISPAPERS_PRICE;
+    uint256 public maxGenesisPapersAmount;
+    uint256 public maxGenesisPapersTierAmount;
+    uint256 public maxGenesisPapersPerTx;
+    uint256 public genesisPapersPrice;
 
     uint256 public genesisPapersAuctionSaleTimeStep;
     uint256 public genesisPapersAuctionSaleStartPrice;
@@ -63,17 +62,12 @@ contract TimelessMuchaStorage is IPaper {
     uint256 public printStartTimestamp;
     uint256 public printEndTimestamp;
 
-    bool public whitelistMintStatus;
-    bool public publicMintStatus;
-    bool public dutchAuctionMintStatus;
-    bool public printPhaseStatus;
-
     address public treasury;
 
     string public baseURI;
 }
 
-contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A, Ownable, ERC2981 {
+contract TimelessMucha is ERC721AQueryable, ITimelessMucha, IPaper, TimelessMuchaStorage, Ownable, ReentrancyGuard, ERC2981 {
 
     using SafeMath for uint256;
     using Strings for uint256;
@@ -83,32 +77,18 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
      // Configurations //
     ////////////////////
 
-    constructor()
+    constructor(
+        string memory _tokenURI, 
+        uint256 _tokenPrice
+    )
         ERC721A("TimelessMucha", "TM") 
     {
-        baseURI = "https://api.timelessmucha.xyz/metadata/";
+        baseURI = _tokenURI;
         isSigner[owner()] = true;
-        MAX_GENESISPAPERS_AMOUNT = 1860;
-        MAX_GENESISPAPERS_TIERAMOUNT = 1860;
-        MAX_GENESISPAPERS_PERTX = 1860;
-        GENESISPAPERS_PRICE = 0.01 ether;
-        genesisPapersAuctionSaleTimeStep = 120;
-        genesisPapersAuctionSaleStartPrice = 0.1 ether;
-        genesisPapersAuctionSaleEndPrice = 0.01 ether;
-        genesisPapersAuctionSalePriceStep = 0.01 ether;
-        genesisPapersAuctionSaleMaxStepAmount = 9;
-        whitelistMintStartTimestamp = block.timestamp;
-        whitelistMintEndTimestamp = block.timestamp + 2 hours;
-        publicMintStartTimestamp = block.timestamp;
-        publicMintEndTimestamp = block.timestamp + 2 hours;
-        dutchAuctionMintStartTimestamp = block.timestamp;
-        dutchAuctionMintEndTimestamp = block.timestamp + 2 hours;
-        printStartTimestamp = block.timestamp;
-        printEndTimestamp = block.timestamp + 2 hours;
-        whitelistMintStatus = false;
-        publicMintStatus = false;
-        dutchAuctionMintStatus = false;
-        printPhaseStatus = false;
+        maxGenesisPapersAmount = 1860;
+        maxGenesisPapersPerTx = 20;
+        genesisPapersPrice = _tokenPrice;
+
         treasury = owner();
         _setDefaultRoyalty(owner(), 1000);
     }
@@ -132,9 +112,6 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         if (block.timestamp >= whitelistMintEndTimestamp) {
             revert Ended();
         }
-        if (whitelistMintStatus == false) {
-            revert Inactive();
-        }
         _;
     }
 
@@ -144,9 +121,6 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         }
         if (block.timestamp >= publicMintEndTimestamp) {
             revert Ended();
-        }
-        if (publicMintStatus == false) {
-            revert Inactive();
         }
         _;
     }
@@ -158,9 +132,6 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         if (block.timestamp >= dutchAuctionMintEndTimestamp) {
             revert Ended();
         }
-        if (dutchAuctionMintStatus == false) {
-            revert Inactive();
-        }
         _;
     }
 
@@ -170,16 +141,6 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         }
         if (block.timestamp >= printEndTimestamp) {
             revert Ended();
-        }
-        if (printPhaseStatus == false) {
-            revert Inactive();
-        }
-        _;
-    }
-
-    modifier callerIsUser() {
-        if (tx.origin != msg.sender) {
-            revert CallerIsNotUser();
         }
         _;
     }
@@ -212,7 +173,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyAuthorized
     {
-        if (totalSupply().add(quantities) > MAX_GENESISPAPERS_AMOUNT) {
+        if (totalSupply().add(quantities) > maxGenesisPapersAmount) {
             revert ExceedMaxGenesisPapers();
         }
 
@@ -222,24 +183,25 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
 
     /** @dev Mint genesis paper tokens as Whitelisted Address
      * @param quantities Amount of genesis paper tokens the address wants to mint
-     * @param maxQuantites Maximum amount of genesis paper tokens the address can mint
+     * @param maxQuantities Maximum amount of genesis paper tokens the address can mint
      * @param signature Signature used to verify the minter address and amount of claimable tokens
      */
     function mintWhitelistGenesisPapers(
         uint256 quantities, 
-        uint256 maxQuantites, 
+        uint256 maxQuantities, 
         bytes calldata signature
     )
         external
         payable
         override
         whitelistMintActive
+        nonReentrant
     {
         bytes32 hash = ECDSA.toEthSignedMessageHash(
             keccak256(
                 abi.encodePacked(
                     msg.sender,
-                    maxQuantites
+                    maxQuantities
                 )
             )
         );
@@ -248,23 +210,15 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
             revert InvalidSignature();
         }
 
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_TIERAMOUNT) {
+        if (totalSupply().add(quantities) > maxGenesisPapersTierAmount) {
             revert ExceedMaxTierGenesisPapers();
         }
 
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_AMOUNT) {
-            revert ExceedMaxGenesisPapers();
+        if (msg.value != quantities.mul(genesisPapersPrice)) {
+            revert InvalidAmountETH();
         }
 
-        if (quantities == 0) {
-            revert ZeroQuantity();
-        }
-
-        if (msg.value < quantities.mul(GENESISPAPERS_PRICE)) {
-            revert NotEnoughETH();
-        }
-
-        if (whitelistMinted[msg.sender] + quantities > maxQuantites) {
+        if (whitelistMinted[msg.sender] + quantities > maxQuantities) {
             revert NotEnoughQuota();
         }
 
@@ -282,26 +236,17 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         payable
         override
         publicMintActive
-        callerIsUser
+        nonReentrant
     {
-
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_TIERAMOUNT) {
+        if (totalSupply().add(quantities) > maxGenesisPapersTierAmount) {
             revert ExceedMaxTierGenesisPapers();
         }
 
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_AMOUNT) {
-            revert ExceedMaxGenesisPapers();
+        if (msg.value != quantities.mul(genesisPapersPrice)) {
+            revert InvalidAmountETH();
         }
 
-        if (quantities == 0) {
-            revert ZeroQuantity();
-        }
-
-        if (msg.value < quantities.mul(GENESISPAPERS_PRICE)) {
-            revert NotEnoughETH();
-        }
-
-        if (quantities > MAX_GENESISPAPERS_PERTX) {
+        if (quantities > maxGenesisPapersPerTx) {
             revert MintTooManyInOneTx();
         }
 
@@ -317,25 +262,17 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         payable
         override
         dutchAuctionMintActive
-        callerIsUser
+        nonReentrant
     {
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_TIERAMOUNT) {
+        if (totalSupply().add(quantities) > maxGenesisPapersTierAmount) {
             revert ExceedMaxTierGenesisPapers();
         }
 
-        if (totalSupply() + quantities > MAX_GENESISPAPERS_AMOUNT) {
-            revert ExceedMaxGenesisPapers();
+        if (msg.value != quantities.mul(getDutchAuctionPrice())) {
+            revert InvalidAmountETH();
         }
 
-        if (quantities == 0) {
-            revert ZeroQuantity();
-        }
-
-        if (msg.value < quantities.mul(GENESISPAPERS_PRICE)) {
-            revert NotEnoughETH();
-        }
-
-        if (quantities > MAX_GENESISPAPERS_PERTX) {
+        if (quantities > maxGenesisPapersPerTx) {
             revert MintTooManyInOneTx();
         }
 
@@ -345,7 +282,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
 
     /** @dev Mint genesis paper tokens during dutch auction sale
      * @param tokenId Amount of genesis paper tokens the address wants to mint
-     * @param artworkId test
+     * @param artworkId The artworkId that token holders want to print on their genesis papers
      */
     function printGenesisPapers(
         uint256 tokenId, 
@@ -360,43 +297,21 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         }
 
         if (artworkPrintedAmount[artworkId] + 1 > editionLimitAmount[artworkId]) {
-            revert ExceedMaxPrintableAount();
+            revert ExceedMaxPrintableAmount();
         }
 
-        if (PaperItem[tokenId].printed == true) {
+        if (paperItem[tokenId].printed == true) {
             revert AlreadyPrinted();
         }
 
         artworkPrintedAmount[artworkId] += 1;
-        PaperItem[tokenId] = PaperInfo(artworkId, artworkPrintedAmount[artworkId], true);
+        paperItem[tokenId] = PaperInfo(artworkId, artworkPrintedAmount[artworkId], true);
         emit PrintGenesisPaper(tokenId);
     }
 
       ////////////////////////////
      // Info Getters Functions //
     ////////////////////////////
-
-    /** @dev Retrieve all tokenIds of a given address
-     * @param owner Address which caller wants to get all of its tokenIds
-     */
-    function tokensOfOwner(address owner)
-        public 
-        view 
-        override
-        returns(uint256[] memory tokenIds)
-    {
-        uint256 tokenCount = balanceOf(owner);
-        if (tokenCount == 0) {
-            // Return an empty array
-            return new uint256[](0);
-        } else {
-            uint256[] memory result = new uint256[](tokenCount);
-            for (uint256 index = 0; index < tokenCount; index++) {
-                result[index] = tokenOfOwnerByIndex(owner, index);
-            }
-            return result;
-        }
-    }
 
     /** @dev Retrieve the current price of dutch aution sale
      */
@@ -407,8 +322,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         returns (uint256 price)
     {
         if (block.timestamp < dutchAuctionMintStartTimestamp ||
-            block.timestamp > dutchAuctionMintEndTimestamp ||
-            !dutchAuctionMintStatus
+            block.timestamp > dutchAuctionMintEndTimestamp
         ) {
             return genesisPapersAuctionSaleStartPrice;
         } else {
@@ -429,12 +343,15 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         returns(bool status)
     {
-        return PaperItem[tokenId].printed;
+        return paperItem[tokenId].printed;
     }
 
     /** @dev Retrieve all the print status of a given address
      * @param owner Address which caller wants to get all of its print status
      */
+
+
+
     function getTokenPrintStatusByOwner(address owner)
         external 
         view
@@ -447,9 +364,10 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
             return new bool[](0);
         } else {
             bool[] memory result = new bool[](tokenCount);
+            uint256[] memory tokenIds = IERC721AQueryable(address(this)).tokensOfOwner(owner);
             for (uint256 index = 0; index < tokenCount; index++) {
-                uint256 tokenId = tokenOfOwnerByIndex(owner, index);
-                result[index] = PaperItem[tokenId].printed;
+                uint256 tokenId = tokenIds[index];
+                result[index] = paperItem[tokenId].printed;
             }
             return result;
         }
@@ -481,8 +399,9 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
             return new bool[](0);
         } else {
             bool[] memory result = new bool[](tokenCount);
+            uint256[] memory tokenIds = IERC721AQueryable(address(this)).tokensOfOwner(owner);
             for (uint256 index = 0; index < tokenCount; index++) {
-                uint256 tokenId = tokenOfOwnerByIndex(owner, index);
+                uint256 tokenId = tokenIds[index];
                 result[index] = isTokenInvalid.get(tokenId);
             }
             return result;
@@ -492,9 +411,9 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
     /** @dev Get all the holders address, work as snapshots
      */
     function getAllHolders()
-        public 
+        external 
         view
-        override 
+        override
         returns(address[] memory holdersList)
     {
         uint256 ownersCount = 0;
@@ -508,7 +427,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
                 if (tokenCheck[index]==false) {
                     address owner = ownerOf(index);
                     uint256 ownerBalance = balanceOf(owner);
-                    uint256[] memory tokenIds = tokensOfOwner(owner);
+                    uint256[] memory tokenIds = IERC721AQueryable(address(this)).tokensOfOwner(owner);
                     for (uint256 idx = 0; idx < ownerBalance; idx++) {
                         tokenCheck[tokenIds[idx]] = true;
                     }
@@ -529,7 +448,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
     function getAllHoldersInfo() 
         external 
         view
-        override 
+        override
         returns(HolderInfo[] memory holdersList)
     {
         uint256 ownersCount = 0;
@@ -543,7 +462,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
                 if (tokenCheck[index]==false) {
                     address owner = ownerOf(index);
                     uint256 ownerBalance = balanceOf(owner);
-                    uint256[] memory tokenIds = tokensOfOwner(owner);
+                    uint256[] memory tokenIds = IERC721AQueryable(address(this)).tokensOfOwner(owner);
                     for (uint256 idx = 0; idx < ownerBalance; idx++) {
                         tokenCheck[tokenIds[idx]] = true;
                     }
@@ -568,7 +487,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override 
         returns (string memory curTokenURI) 
     {
-        if(!_exists(tokenId)) {
+        if (!_exists(tokenId)) {
             revert TokenNotExist();
         }
 		return string(abi.encodePacked(baseURI, tokenId.toString()));
@@ -581,70 +500,121 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
     /** @dev Set the status, starting time, and ending time of the whitelist mint phase
      * @param newWhitelistMintStartTimestamp After this timestamp the whitelist mint phase will be enabled
      * @param newWhitelistMintEndTimestamp After this timestamp the whitelist mint phase will be disabled
-     * @param newWhitelistMintEnableStatus True if the whitelist mint phase have started, otherwise false
      * @notice Start time must be smaller than end time
      */
     function setWhitelistMintPhase(
         uint256 newWhitelistMintStartTimestamp, 
-        uint256 newWhitelistMintEndTimestamp, 
-        bool newWhitelistMintEnableStatus
+        uint256 newWhitelistMintEndTimestamp
     )
         external
         override
         onlyAuthorized
     {
-        if(newWhitelistMintStartTimestamp > newWhitelistMintEndTimestamp) {
+        if (newWhitelistMintStartTimestamp > newWhitelistMintEndTimestamp) {
             revert InvalidInput();
         }
+
+        if (newWhitelistMintStartTimestamp >= publicMintStartTimestamp &&
+            newWhitelistMintStartTimestamp <= publicMintEndTimestamp &&
+            newWhitelistMintEndTimestamp >= publicMintStartTimestamp &&
+            newWhitelistMintEndTimestamp <= publicMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
+        if (newWhitelistMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
+            newWhitelistMintStartTimestamp <= dutchAuctionMintEndTimestamp &&
+            newWhitelistMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
+            newWhitelistMintEndTimestamp <= dutchAuctionMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
         whitelistMintStartTimestamp = newWhitelistMintStartTimestamp;
         whitelistMintEndTimestamp = newWhitelistMintEndTimestamp;
-        whitelistMintStatus = newWhitelistMintEnableStatus;
+
+        emit WhitelistMintPhaseSet(newWhitelistMintStartTimestamp, newWhitelistMintEndTimestamp);
     }
 
     /** @dev Set the status, starting time, and ending time of the public mint phase
      * @param newPublicMintStartTimestamp After this timestamp the public mint phase will be enabled
      * @param newPublicMintEndTimestamp After this timestamp the public mint phase will be disabled
-     * @param newPublicMintEnableStatus True if the public mint phase have started, otherwise false
      * @notice Start time must be smaller than end time
      */
     function setPublicMintPhase(
         uint256 newPublicMintStartTimestamp, 
-        uint256 newPublicMintEndTimestamp, 
-        bool newPublicMintEnableStatus
+        uint256 newPublicMintEndTimestamp
     )
         external
         override
         onlyAuthorized
     {        
-        if(newPublicMintStartTimestamp > newPublicMintEndTimestamp) {
+        if (newPublicMintStartTimestamp > newPublicMintEndTimestamp) {
             revert InvalidInput();
         }
+
+        if (newPublicMintStartTimestamp >= whitelistMintStartTimestamp &&
+            newPublicMintStartTimestamp <= whitelistMintEndTimestamp &&
+            newPublicMintEndTimestamp >= whitelistMintStartTimestamp &&
+            newPublicMintEndTimestamp <= whitelistMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
+        if (newPublicMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
+            newPublicMintStartTimestamp <= dutchAuctionMintEndTimestamp &&
+            newPublicMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
+            newPublicMintEndTimestamp <= dutchAuctionMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
         publicMintStartTimestamp = newPublicMintStartTimestamp;
         publicMintEndTimestamp = newPublicMintEndTimestamp;
-        publicMintStatus = newPublicMintEnableStatus;
+
+        emit PublicMintPhaseSet(newPublicMintStartTimestamp, newPublicMintEndTimestamp);
     }
 
     /** @dev Set the status, starting time, and ending time of the dutch aution mint phase
      * @param newDutchAuctionMintStartTimestamp After this timestamp the dutch aution mint phase will be enabled
      * @param newDutchAuctionMintEndTimestamp After this timestamp the dutch aution mint phase will be disabled
-     * @param newDutchAuctionMintStatus True if the dutch aution mint phase have started, otherwise false
      * @notice Start time must be smaller than end time
      */
     function setDutchAuctionMintPhase(
         uint256 newDutchAuctionMintStartTimestamp, 
-        uint256 newDutchAuctionMintEndTimestamp, 
-        bool newDutchAuctionMintStatus
+        uint256 newDutchAuctionMintEndTimestamp
     )
         external
         override
         onlyAuthorized
     {
-        if(newDutchAuctionMintStartTimestamp > newDutchAuctionMintEndTimestamp) {
+        if (genesisPapersAuctionSaleTimeStep == 0 ||
+            genesisPapersAuctionSaleStartPrice == 0 ||
+            genesisPapersAuctionSaleEndPrice == 0 ||
+            genesisPapersAuctionSalePriceStep == 0 ||
+            genesisPapersAuctionSaleMaxStepAmount == 0)
+        {
+            revert SalesInfoUnset();
+        }
+
+        if (newDutchAuctionMintStartTimestamp > newDutchAuctionMintEndTimestamp) {
             revert InvalidInput();
         }
+
+        if (newDutchAuctionMintStartTimestamp >= whitelistMintStartTimestamp &&
+            newDutchAuctionMintStartTimestamp <= whitelistMintEndTimestamp &&
+            newDutchAuctionMintEndTimestamp >= whitelistMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp <= whitelistMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
+        if (newDutchAuctionMintStartTimestamp >= publicMintStartTimestamp &&
+            newDutchAuctionMintStartTimestamp <= publicMintEndTimestamp &&
+            newDutchAuctionMintEndTimestamp >= publicMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp <= publicMintEndTimestamp) {
+            revert InvalidInput();
+        }
+
         dutchAuctionMintStartTimestamp = newDutchAuctionMintStartTimestamp;
         dutchAuctionMintEndTimestamp = newDutchAuctionMintEndTimestamp;
-        dutchAuctionMintStatus = newDutchAuctionMintStatus;
+
+        emit PublicMintPhaseSet(newDutchAuctionMintStartTimestamp, newDutchAuctionMintEndTimestamp);
     }
 
     /** @dev Set the sales-related information of the dutch aution mint phase
@@ -674,9 +644,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         if (newDutchAuctionStartPrice != newDutchAuctionEndPrice.add(newDutchAuctionMaxStepAmount.mul(newDutchAuctionPriceStep))) {
             revert InvalidInput();
         }
-        if (
-            dutchAuctionMintStatus &&
-            block.timestamp >= dutchAuctionMintStartTimestamp &&
+        if (block.timestamp >= dutchAuctionMintStartTimestamp &&
             block.timestamp <= dutchAuctionMintEndTimestamp
         ) {
             revert DuringSales();
@@ -686,29 +654,30 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         genesisPapersAuctionSaleEndPrice = newDutchAuctionEndPrice;
         genesisPapersAuctionSalePriceStep = newDutchAuctionPriceStep;
         genesisPapersAuctionSaleMaxStepAmount = newDutchAuctionMaxStepAmount;
+
+        emit DutchAuctionSaleInfoSet(newDutchAuctionTimestep, newDutchAuctionStartPrice, newDutchAuctionEndPrice, newDutchAuctionPriceStep, newDutchAuctionMaxStepAmount);
     }
 
     /** @dev Set the status, starting time, and ending time of the print phase
      * @param newPrintStartTimestamp After this timestamp the print phase will be enabled
      * @param newPrintEndTimestamp After this timestamp the print phase will be disabled
-     * @param newPrintEnableStatus True if the print phase have started, otherwise false
      * @notice Start time must be smaller than end time
      */
     function setPrintPhase(
         uint256 newPrintStartTimestamp, 
-        uint256 newPrintEndTimestamp, 
-        bool newPrintEnableStatus
+        uint256 newPrintEndTimestamp
     ) 
         external
         override
         onlyAuthorized
     {
-        if(newPrintStartTimestamp > newPrintEndTimestamp) {
+        if (newPrintStartTimestamp > newPrintEndTimestamp) {
             revert InvalidInput();
         }
         printStartTimestamp = newPrintStartTimestamp;
         printEndTimestamp = newPrintEndTimestamp;
-        printPhaseStatus = newPrintEnableStatus;
+
+        emit PrintPhaseSet(newPrintStartTimestamp, newPrintEndTimestamp);
     }
 
       ////////////////////////////////////////
@@ -757,11 +726,11 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        if(authorizedAddressArray.length != newAuthorizedStatusArray.length) {
+        if (authorizedAddressArray.length != newAuthorizedStatusArray.length) {
             revert InvalidInput();
         }
-        uint256 listLegnth = authorizedAddressArray.length;
-        for(uint256 index = 0; index < listLegnth; index++) {
+        uint256 listLength = authorizedAddressArray.length;
+        for(uint256 index = 0; index < listLength; index++) {
             isAuthorized[authorizedAddressArray[index]] = newAuthorizedStatusArray[index];
         }
     }
@@ -778,11 +747,11 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        if(signerAddressArray.length != newSignerStatusArray.length) {
+        if (signerAddressArray.length != newSignerStatusArray.length) {
             revert InvalidInput();
         }
-        uint256 listLegnth = signerAddressArray.length;
-        for(uint256 index = 0; index < listLegnth; index++) {
+        uint256 listLength = signerAddressArray.length;
+        for(uint256 index = 0; index < listLength; index++) {
             isSigner[signerAddressArray[index]] = newSignerStatusArray[index];
         }
     }
@@ -806,8 +775,8 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        uint256 listLegnth = tokenIds.length;
-        for(uint256 index = 0; index < listLegnth; index++) {
+        uint256 listLength = tokenIds.length;
+        for(uint256 index = 0; index < listLength; index++) {
             isTokenInvalid.set(tokenIds[index]);
         }
     }
@@ -823,7 +792,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         isTokenInvalid.unset(tokenId);
     }
 
-    /** @dev Set the specific token to valid in batcg, to revert the transfering transactions 
+    /** @dev Set the specific token to valid in batch, to revert the transfering transactions 
      * @param tokenIds Token Id that owner wants to set to invalid
      */
     function setTokenValidInBatch(uint256[] memory tokenIds)
@@ -831,8 +800,8 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        uint256 listLegnth = tokenIds.length;
-        for(uint256 index = 0; index < listLegnth; index++) {
+        uint256 listLength = tokenIds.length;
+        for(uint256 index = 0; index < listLength; index++) {
             isTokenInvalid.unset(tokenIds[index]);
         }
     }
@@ -910,11 +879,11 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        if(ids.length != maxAmounts.length) {
+        if (ids.length != maxAmounts.length) {
             revert InvalidInput();
         }
-        uint256 listLegnth = ids.length;
-        for(uint256 index = 0; index < listLegnth; index++) {
+        uint256 listLength = ids.length;
+        for(uint256 index = 0; index < listLength; index++) {
             editionLimitAmount[ids[index]] = maxAmounts[index];
         }
     }
@@ -927,40 +896,82 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        GENESISPAPERS_PRICE = newPrice;
+        genesisPapersPrice = newPrice;
+
+        emit GenesisPapersPriceSet(newPrice);
     }
 
     /** @dev Set the maximum total amount of genesis paper tokens
-     * @param newMaxMuchaPapersAmount Maximum total amount of the genesis paper tokens
+     * @param newMaxGenesisPapersAmount Maximum total amount of the genesis paper tokens
      */
-    function setMaxGenesisPapersAmount(uint256 newMaxMuchaPapersAmount)
+    function setMaxGenesisPapersAmount(uint256 newMaxGenesisPapersAmount)
         external
         override
         onlyOwner
     {
-        MAX_GENESISPAPERS_AMOUNT = newMaxMuchaPapersAmount;
+        if (newMaxGenesisPapersAmount == 0) { 
+            revert InvalidInput();
+        }
+
+        if (newMaxGenesisPapersAmount < maxGenesisPapersTierAmount) {
+            revert InvalidInput();
+        }
+
+        if (newMaxGenesisPapersAmount < totalSupply()) {
+            revert InvalidInput();
+        }
+
+        maxGenesisPapersAmount = newMaxGenesisPapersAmount;
+
+        emit GenesisPaperMaxAmountSet(newMaxGenesisPapersAmount);
     }
 
     /** @dev Set the maximum limit amount of each sales phase
-     * @param newMaxMuchaPapersTierAmount Maximum limit amount of this sales phase
+     * @param newMaxGenesisPapersTierAmount Maximum limit amount of this sales phase
      */
-    function setMaxGenesisPapersTierAmount(uint256 newMaxMuchaPapersTierAmount)
-        external
+    function setMaxGenesisPapersTierAmount(uint256 newMaxGenesisPapersTierAmount)
+        public
         override
         onlyOwner
     {
-        MAX_GENESISPAPERS_TIERAMOUNT = newMaxMuchaPapersTierAmount;
+        if (newMaxGenesisPapersTierAmount == 0) { 
+            revert InvalidInput();
+        }
+
+        if (maxGenesisPapersTierAmount > maxGenesisPapersAmount) { 
+            revert InvalidInput();
+        }
+
+        if (maxGenesisPapersTierAmount < totalSupply()) {
+            revert InvalidInput();
+        }
+
+        if ((block.timestamp >= whitelistMintStartTimestamp &&
+            block.timestamp <= whitelistMintEndTimestamp) ||
+            (block.timestamp >= publicMintStartTimestamp &&
+            block.timestamp <= publicMintEndTimestamp) ||
+            (block.timestamp >= dutchAuctionMintStartTimestamp &&
+            block.timestamp <= dutchAuctionMintEndTimestamp)
+        ) {
+            revert DuringSales();
+        }
+
+        maxGenesisPapersTierAmount = newMaxGenesisPapersTierAmount;
+
+        emit GenesisPaperMaxTierAmountSet(newMaxGenesisPapersTierAmount);
     }
 
     /** @dev Set the maximum limit amount of a single transaction
-     * @param newMaxMuchaPapersPerTx Maximum limit amount of a single transaction
+     * @param newMaxGenesisPapersPerTx Maximum limit amount of a single transaction
      */
-    function setMaxGenesisPapersPerTx(uint256 newMaxMuchaPapersPerTx)
+    function setMaxGenesisPapersPerTx(uint256 newMaxGenesisPapersPerTx)
         external
         override
         onlyOwner
     {
-        MAX_GENESISPAPERS_PERTX = newMaxMuchaPapersPerTx;
+        maxGenesisPapersPerTx = newMaxGenesisPapersPerTx;
+
+        emit GenesisPaperMaxPerTxAmountSet(newMaxGenesisPapersPerTx);
     }
 
     /** @dev Set the address that act as treasury and recieve all the fund from token contract
@@ -971,7 +982,7 @@ contract TimelessMucha is ITimelessMucha, IPaper, TimelessMuchaStorage, ERC721A,
         override
         onlyOwner
     {
-        if(newTreasuryAddress == address(0)) {
+        if (newTreasuryAddress == address(0)) {
             revert ZeroAddress();
         }
         treasury = newTreasuryAddress;
