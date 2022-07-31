@@ -12,7 +12,7 @@ describe("Timeless  Mucha", function() {
         gasPrice = ethers.BigNumber.from("90")
         oneGwei = ethers.BigNumber.from("1000000000");
         const genesisPaperContract = await ethers.getContractFactory("TimelessMucha", owner);
-        genesisPaperToken = await genesisPaperContract.deploy();
+        genesisPaperToken = await genesisPaperContract.deploy("", ethers.utils.parseEther("0.01"));
         await genesisPaperToken.setArtworkEditionMaxLimitInBatch([...Array(40 - 1 + 1).keys()].map(x => x + 1), Array(40).fill(40));
     });
 
@@ -26,30 +26,23 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())+720).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())+720).toString());
             
             await expectRevert(
                 genesisPaperToken.connect(addr1).printGenesisPapers(9, 1),
                 "NotStarted()"
             );
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())-120).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())-120).toString());
             
             await expectRevert(
                 genesisPaperToken.connect(addr1).printGenesisPapers(9, 1),
                 "Ended()"
             );
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime()+360)).toString(), false);
-            
-            await expectRevert(
-                genesisPaperToken.connect(addr1).printGenesisPapers(9, 1),
-                "Inactive()"
-            );
-
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(9, 1);
-            const printRes = await genesisPaperToken.PaperItem(9);
+            const printRes = await genesisPaperToken.paperItem(9);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -64,6 +57,7 @@ describe("Timeless  Mucha", function() {
         });
 
         it("Unauthorized - Print", async function() {
+            await genesisPaperToken.connect(owner).setMaxGenesisPapersTierAmount(200);
             await genesisPaperToken.mintGiveawayGenesisPapers(addr1.address, 10);
             await genesisPaperToken.mintGiveawayGenesisPapers(addr2.address, 10);
             expect((await genesisPaperToken.balanceOf(addr1.address)).toString()).to.be.equal("10");
@@ -79,7 +73,7 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner2[0]).to.be.equal('10');
             expect(tokensOfOwner2[tokensOfOwner2.length-1]).to.be.equal('19');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+720).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+720).toString());
             
 
             await expectRevert(
@@ -93,7 +87,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr2).printGenesisPapers(10, 1),
-                "ExceedMaxPrintableAount()"
+                "ExceedMaxPrintableAmount()"
             );
 
             await genesisPaperToken.setArtworkEditionMaxLimitInBatch([...Array(40 - 1 + 1).keys()].map(x => x + 1), Array(40).fill(2));
@@ -105,7 +99,7 @@ describe("Timeless  Mucha", function() {
 
             await genesisPaperToken.connect(addr2).printGenesisPapers(10, 1);
 
-            const printRes = await genesisPaperToken.PaperItem(9);
+            const printRes = await genesisPaperToken.paperItem(9);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;

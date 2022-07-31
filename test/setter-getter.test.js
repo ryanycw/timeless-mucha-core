@@ -12,8 +12,11 @@ describe("Timeless  Mucha", function() {
         gasPrice = ethers.BigNumber.from("90")
         oneGwei = ethers.BigNumber.from("1000000000");
         const genesisPaperContract = await ethers.getContractFactory("TimelessMucha", owner);
-        genesisPaperToken = await genesisPaperContract.deploy();
+        genesisPaperToken = await genesisPaperContract.deploy("", ethers.utils.parseEther("0.01"));
         await genesisPaperToken.setArtworkEditionMaxLimitInBatch([...Array(40 - 1 + 1).keys()].map(x => x + 1), Array(40).fill(40));
+        await genesisPaperToken.setMaxGenesisPapersTierAmount(200);
+        await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
+        await genesisPaperToken.setBaseURI("https://api.timelessmucha.xyz/metadata/");
     });
 
     describe("Test Set and Get Related Functions", function() {
@@ -160,7 +163,7 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true),
+                genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString()),
                 "NotAuthorized()"
             );
 
@@ -169,9 +172,9 @@ describe("Timeless  Mucha", function() {
             const authorizedStatus = await genesisPaperToken.isAuthorized(addr1.address);
             expect(authorizedStatus).to.be.true;
 
-            genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -192,7 +195,7 @@ describe("Timeless  Mucha", function() {
             const signature = await owner.signMessage(ethers.utils.arrayify(messageHash));
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true),
+                genesisPaperToken.connect(addr1).setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString()),
                 "NotAuthorized()"
             );
 
@@ -201,7 +204,7 @@ describe("Timeless  Mucha", function() {
             const authorizedStatus = await genesisPaperToken.isAuthorized(addr1.address);
             expect(authorizedStatus).to.be.true;
 
-            await genesisPaperToken.connect(addr1).setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.connect(addr1).setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).mintWhitelistGenesisPapers(4, maxQuant, signature, {value: ethers.utils.parseEther('0.04')});
             expect((await genesisPaperToken.balanceOf(addr1.address)).toString()).to.be.equal("4");
             const rawTokensOfOwner = (await genesisPaperToken.tokensOfOwner(addr1.address)).toString();
@@ -209,9 +212,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('3');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -227,7 +230,7 @@ describe("Timeless  Mucha", function() {
 
         it("Unauthorized - Set Public Mint", async function() {
             await expectRevert(
-                genesisPaperToken.connect(addr1).setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true),
+                genesisPaperToken.connect(addr1).setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString()),
                 "NotAuthorized()"
             );
 
@@ -236,7 +239,7 @@ describe("Timeless  Mucha", function() {
             const authorizedStatus = await genesisPaperToken.isAuthorized(addr1.address);
             expect(authorizedStatus).to.be.true;
 
-            await genesisPaperToken.connect(addr1).setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.connect(addr1).setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).mintPublicGenesisPapers(10, {value: ethers.utils.parseEther('0.1')});
             expect((await genesisPaperToken.balanceOf(addr1.address)).toString()).to.be.equal("10");
             const rawTokensOfOwner = (await genesisPaperToken.tokensOfOwner(addr1.address)).toString();
@@ -244,9 +247,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -262,7 +265,7 @@ describe("Timeless  Mucha", function() {
 
         it("Unauthorized - Set Dutch Auction Mint", async function() {
             await expectRevert(
-                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true),
+                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString()),
                 "NotAuthorized()"
             );
 
@@ -277,7 +280,7 @@ describe("Timeless  Mucha", function() {
             expect(authorizedStatus).to.be.true;
 
             await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
-            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
+            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString());
             const price1 = await genesisPaperToken.getDutchAuctionPrice();
             expect(ethers.utils.formatEther(price1)).to.be.equal('0.1');
             await network.provider.send("evm_increaseTime", [120]);
@@ -296,9 +299,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -314,7 +317,7 @@ describe("Timeless  Mucha", function() {
 
         it("Invalid Input - Set Dutch Auction Mint", async function() {
             await expectRevert(
-                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true),
+                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString()),
                 "NotAuthorized()"
             );
 
@@ -339,7 +342,7 @@ describe("Timeless  Mucha", function() {
             );
 
             await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
-            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
+            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString());
 
             await expectRevert(
                 genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9),
@@ -364,9 +367,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -382,20 +385,20 @@ describe("Timeless  Mucha", function() {
 
         it("Invalid Timestamp - Set Each Mint", async function() {
             await expectRevert(
-                genesisPaperToken.setWhitelistMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString(), true),
+                genesisPaperToken.setWhitelistMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString()),
                 "InvalidInput()"
             );
             await expectRevert(
-                genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString(), true),
+                genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString()),
                 "InvalidInput()"
             );
             await expectRevert(
-                genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString(), true),
+                genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString()),
                 "InvalidInput()"
             );
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true),
+                genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString()),
                 "NotAuthorized()"
             );
 
@@ -420,7 +423,7 @@ describe("Timeless  Mucha", function() {
             );
 
             await genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9);
-            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
+            await genesisPaperToken.connect(addr1).setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString());
 
             await expectRevert(
                 genesisPaperToken.connect(owner).setDutchAuctionSaleInfo(120, ethers.utils.parseEther('0.1'), ethers.utils.parseEther('0.01'), ethers.utils.parseEther('0.01'), 9),
@@ -445,9 +448,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -470,7 +473,7 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true),
+                genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString()),
                 "NotAuthorized()"
             );
 
@@ -492,10 +495,10 @@ describe("Timeless  Mucha", function() {
             authorizedStatus = await genesisPaperToken.isAuthorized(addr2.address);
             expect(authorizedStatus).to.be.true;
 
-            genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
-            genesisPaperToken.connect(addr2).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            genesisPaperToken.connect(addr1).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
+            genesisPaperToken.connect(addr2).setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -516,7 +519,7 @@ describe("Timeless  Mucha", function() {
             const signature11 = await addr1.signMessage(ethers.utils.arrayify(messageHash));
             const signature12 = await addr2.signMessage(ethers.utils.arrayify(messageHash));
             const signature13 = await addr3.signMessage(ethers.utils.arrayify(messageHash));
-            await genesisPaperToken.setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setWhitelistMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await expectRevert(
                 genesisPaperToken.connect(addr1).mintWhitelistGenesisPapers(4, maxQuant, signature11, {value: ethers.utils.parseEther('0.04')}),
                 "InvalidSignature()"
@@ -554,9 +557,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -571,16 +574,19 @@ describe("Timeless  Mucha", function() {
         });
 
         it("Unauthorized - Set Sales Amount", async function() {
-            await genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString(), true);
+            await genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString());
             let price = await genesisPaperToken.getDutchAuctionPrice();
             expect(ethers.utils.formatEther(price)).to.be.equal('0.1');
             await genesisPaperToken.connect(addr1).mintDutchAuctionGenesisPapers(4, {value: ethers.utils.parseEther('0.4')});
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setMaxGenesisPapersTierAmount(10),
+                genesisPaperToken.connect(addr1).setMaxGenesisPapersTierAmount(200),
                 'Ownable: caller is not the owner'
             );
+
+            await genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())+3600).toString(), ((await utils.getCurTime())+3601).toString());
             await genesisPaperToken.connect(owner).setMaxGenesisPapersTierAmount(10);
+            await genesisPaperToken.setDutchAuctionMintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+3600).toString());
 
             await network.provider.send("evm_increaseTime", [120]);
             await network.provider.send("evm_mine");
@@ -593,31 +599,21 @@ describe("Timeless  Mucha", function() {
             );
 
             await expectRevert(
-                genesisPaperToken.connect(addr1).setMaxGenesisPapersAmount(9),
+                genesisPaperToken.connect(addr1).setMaxGenesisPapersAmount(200),
                 'Ownable: caller is not the owner'
             );
 
-            await genesisPaperToken.connect(owner).setMaxGenesisPapersAmount(9);
+            await genesisPaperToken.connect(owner).setMaxGenesisPapersAmount(200);
 
             await network.provider.send("evm_increaseTime", [120]);
             await network.provider.send("evm_mine");
             price = await genesisPaperToken.getDutchAuctionPrice();
             expect(ethers.utils.formatEther(price)).to.be.equal('0.08');
 
-            await expectRevert(
-                genesisPaperToken.connect(addr1).mintDutchAuctionGenesisPapers(6, {value: ethers.utils.parseEther('0.48')}),
-                "ExceedMaxGenesisPapers()"
-            );
-
             await network.provider.send("evm_increaseTime", [120]);
             await network.provider.send("evm_mine");
             price = await genesisPaperToken.getDutchAuctionPrice();
             expect(ethers.utils.formatEther(price)).to.be.equal('0.07');
-
-            await expectRevert(
-                genesisPaperToken.connect(addr1).mintDutchAuctionGenesisPapers(0, {value: ethers.utils.parseEther('0')}),
-                "ZeroQuantity()"
-            );
 
             await network.provider.send("evm_increaseTime", [120]);
             await network.provider.send("evm_mine");
@@ -626,7 +622,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr1).mintDutchAuctionGenesisPapers(1, {value: ethers.utils.parseEther('0')}),
-                "NotEnoughETH()"
+                "InvalidAmountETH()"
             );
 
             await expectRevert(
@@ -657,9 +653,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('4');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -674,7 +670,7 @@ describe("Timeless  Mucha", function() {
         });
 
         it("Unauthorized - Set Royalties & Price", async function() {
-            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).mintPublicGenesisPapers(2, {value: ethers.utils.parseEther('0.02')});
             await expectRevert(
                 genesisPaperToken.connect(addr1).setGenesisPapersPrice(ethers.utils.parseEther('0.02')),
@@ -684,28 +680,18 @@ describe("Timeless  Mucha", function() {
             await genesisPaperToken.connect(addr1).mintPublicGenesisPapers(2, {value: ethers.utils.parseEther('0.04')});
             await genesisPaperToken.connect(owner).setGenesisPapersPrice(ethers.utils.parseEther('0.01'));
 
+            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())+3600).toString(), ((await utils.getCurTime())+3601).toString());
             await genesisPaperToken.connect(owner).setMaxGenesisPapersTierAmount(7);
+            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
 
             await expectRevert(
                 genesisPaperToken.connect(addr1).mintPublicGenesisPapers(4, {value: ethers.utils.parseEther('0.04')}),
                 "ExceedMaxTierGenesisPapers()"
             );
 
-            await genesisPaperToken.connect(owner).setMaxGenesisPapersAmount(6);
-
-            await expectRevert(
-                genesisPaperToken.connect(addr1).mintPublicGenesisPapers(3, {value: ethers.utils.parseEther('0.04')}),
-                "ExceedMaxGenesisPapers()"
-            );
-
-            await expectRevert(
-                genesisPaperToken.connect(addr1).mintPublicGenesisPapers(0, {value: ethers.utils.parseEther('0.04')}),
-                "ZeroQuantity()"
-            );
-
             await expectRevert(
                 genesisPaperToken.connect(addr1).mintPublicGenesisPapers(1, {value: ethers.utils.parseEther('0')}),
-                "NotEnoughETH()"
+                "InvalidAmountETH()"
             );
 
             await genesisPaperToken.connect(owner).setMaxGenesisPapersPerTx(1);
@@ -721,9 +707,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('4');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -784,9 +770,9 @@ describe("Timeless  Mucha", function() {
             tokenURI = await genesisPaperToken.tokenURI(0);
             expect(tokenURI).to.be.equal("https://api.timelessmucha.xyz/metadata/test/0")
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -801,7 +787,7 @@ describe("Timeless  Mucha", function() {
         });
 
         it("Unauthorized - Set Treasury", async function() {
-            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPublicMintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).mintPublicGenesisPapers(10, {value: ethers.utils.parseEther('0.1')});
 
             await expectRevert(
@@ -829,9 +815,9 @@ describe("Timeless  Mucha", function() {
             expect(tokensOfOwner[0]).to.be.equal('0');
             expect(tokensOfOwner[tokensOfOwner.length-1]).to.be.equal('9');
 
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())-360).toString(), ((await utils.getCurTime())+360).toString());
             await genesisPaperToken.connect(addr1).printGenesisPapers(0, 1);
-            const printRes = await genesisPaperToken.PaperItem(0);
+            const printRes = await genesisPaperToken.paperItem(0);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
@@ -927,10 +913,10 @@ describe("Timeless  Mucha", function() {
 
 
             await expectRevert(
-                genesisPaperToken.setPrintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString(), true),
+                genesisPaperToken.setPrintPhase(((await utils.getCurTime())+360).toString(), ((await utils.getCurTime())-360).toString()),
                 "InvalidInput()"
             );
-            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+720).toString(), true);
+            await genesisPaperToken.setPrintPhase(((await utils.getCurTime())).toString(), ((await utils.getCurTime())+720).toString());
             
 
             await expectRevert(
@@ -944,7 +930,7 @@ describe("Timeless  Mucha", function() {
 
             await expectRevert(
                 genesisPaperToken.connect(addr2).printGenesisPapers(10, 1),
-                "ExceedMaxPrintableAount()"
+                "ExceedMaxPrintableAmount()"
             );
 
             await genesisPaperToken.setArtworkEditionMaxLimitInBatch([...Array(40 - 1 + 1).keys()].map(x => x + 1), Array(40).fill(2));
@@ -956,7 +942,7 @@ describe("Timeless  Mucha", function() {
 
             await genesisPaperToken.connect(addr2).printGenesisPapers(10, 1);
 
-            const printRes = await genesisPaperToken.PaperItem(9);
+            const printRes = await genesisPaperToken.paperItem(9);
             expect(printRes.artworkId.toString()).to.be.equal('1');
             expect(printRes.editionNumber.toString()).to.be.equal('1');
             expect(printRes.printed).to.be.true;
