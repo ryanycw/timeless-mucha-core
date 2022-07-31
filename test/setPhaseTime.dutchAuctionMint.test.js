@@ -17,28 +17,55 @@ describe("Timeless  Mucha", function() {
     });
 
     describe("Set Dutch Auction Mint", function() {
-        it("Set mint timestamp before sales info", async function() {
+        it("Set timestamp when tier amount is zero", async function() {
             let initTime = await utils.getCurTime();
 
             await expectRevert(
                 genesisPaperToken.setDutchAuctionMintPhase((initTime+10).toString(), initTime.toString()),
                 "SalesInfoUnset()"
             );
+
+            await genesisPaperToken.setMaxGenesisPapersTierAmount(10);
+            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
+
+            await genesisPaperToken.setDutchAuctionMintPhase(initTime.toString(), (initTime+5).toString());
+        });
+
+        it("Set mint timestamp before sales info", async function() {
+            let initTime = await utils.getCurTime();
+
+            await genesisPaperToken.setMaxGenesisPapersTierAmount(10);
+
+            await expectRevert(
+                genesisPaperToken.setDutchAuctionMintPhase((initTime+10).toString(), initTime.toString()),
+                "SalesInfoUnset()"
+            );
+
+            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
+
+            await genesisPaperToken.setDutchAuctionMintPhase(initTime.toString(), (initTime+5).toString());
         });
 
         it("Set start time after end time", async function() {
-            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
             let initTime = await utils.getCurTime();
+
+            await genesisPaperToken.setMaxGenesisPapersTierAmount(10);
+            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
 
             await expectRevert(
                 genesisPaperToken.setDutchAuctionMintPhase((initTime+10).toString(), initTime.toString()),
                 "InvalidInput()"
             );
+
+            await genesisPaperToken.setDutchAuctionMintPhase(initTime.toString(), (initTime+5).toString());
         });
 
         it("Set time collapsed with public mint phase", async function() {
             await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
             let initTime = await utils.getCurTime();
+
+            await genesisPaperToken.setMaxGenesisPapersTierAmount(10);
+            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
 
             await genesisPaperToken.setPublicMintPhase((initTime+10).toString(), (initTime+20).toString());
             await genesisPaperToken.setWhitelistMintPhase((initTime+40).toString(), (initTime+50).toString());
@@ -97,11 +124,15 @@ describe("Timeless  Mucha", function() {
                 genesisPaperToken.setDutchAuctionMintPhase((initTime+20).toString(), (initTime+25).toString()),
                 "InvalidInput()"
             );
+
+            await genesisPaperToken.setDutchAuctionMintPhase(initTime.toString(), (initTime+5).toString());
         });
 
         it("Set time collapsed with whitelist mint phase", async function() {
-            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
             let initTime = await utils.getCurTime();
+
+            await genesisPaperToken.setMaxGenesisPapersTierAmount(10);
+            await genesisPaperToken.setDutchAuctionSaleInfo(120, ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.01"), ethers.utils.parseEther("0.01"), 9);
 
             await genesisPaperToken.setPublicMintPhase((initTime+10).toString(), (initTime+20).toString());
             await genesisPaperToken.setWhitelistMintPhase((initTime+40).toString(), (initTime+50).toString());
@@ -160,6 +191,8 @@ describe("Timeless  Mucha", function() {
                 genesisPaperToken.setDutchAuctionMintPhase((initTime+50).toString(), (initTime+55).toString()),
                 "InvalidInput()"
             );
+
+            await genesisPaperToken.setDutchAuctionMintPhase(initTime.toString(), (initTime+5).toString());
         });
     });
 })
