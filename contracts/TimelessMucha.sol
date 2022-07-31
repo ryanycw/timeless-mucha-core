@@ -67,7 +67,14 @@ contract TimelessMuchaStorage is IPaper {
     string public baseURI;
 }
 
-contract TimelessMucha is ERC721AQueryable, ITimelessMucha, IPaper, TimelessMuchaStorage, Ownable, ReentrancyGuard, ERC2981 {
+contract TimelessMucha is 
+    ERC721AQueryable, 
+    ITimelessMucha, 
+    IPaper, 
+    TimelessMuchaStorage, 
+    Ownable, 
+    ReentrancyGuard, 
+    ERC2981 {
 
     using SafeMath for uint256;
     using Strings for uint256;
@@ -514,17 +521,21 @@ contract TimelessMucha is ERC721AQueryable, ITimelessMucha, IPaper, TimelessMuch
             revert InvalidInput();
         }
 
-        if (newWhitelistMintStartTimestamp >= publicMintStartTimestamp &&
-            newWhitelistMintStartTimestamp <= publicMintEndTimestamp &&
-            newWhitelistMintEndTimestamp >= publicMintStartTimestamp &&
-            newWhitelistMintEndTimestamp <= publicMintEndTimestamp) {
+        if ((newWhitelistMintStartTimestamp >= publicMintStartTimestamp &&
+            newWhitelistMintStartTimestamp <= publicMintEndTimestamp) ||
+            (newWhitelistMintEndTimestamp >= publicMintStartTimestamp &&
+            newWhitelistMintEndTimestamp <= publicMintEndTimestamp) ||
+            (newWhitelistMintStartTimestamp <= publicMintStartTimestamp &&
+            newWhitelistMintEndTimestamp >= publicMintEndTimestamp)) {
             revert InvalidInput();
         }
 
-        if (newWhitelistMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
-            newWhitelistMintStartTimestamp <= dutchAuctionMintEndTimestamp &&
-            newWhitelistMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
-            newWhitelistMintEndTimestamp <= dutchAuctionMintEndTimestamp) {
+        if ((newWhitelistMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
+            newWhitelistMintStartTimestamp <= dutchAuctionMintEndTimestamp) ||
+            (newWhitelistMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
+            newWhitelistMintEndTimestamp <= dutchAuctionMintEndTimestamp) ||
+            (newWhitelistMintStartTimestamp <= dutchAuctionMintStartTimestamp &&
+            newWhitelistMintEndTimestamp >= dutchAuctionMintEndTimestamp)) {
             revert InvalidInput();
         }
 
@@ -551,17 +562,21 @@ contract TimelessMucha is ERC721AQueryable, ITimelessMucha, IPaper, TimelessMuch
             revert InvalidInput();
         }
 
-        if (newPublicMintStartTimestamp >= whitelistMintStartTimestamp &&
-            newPublicMintStartTimestamp <= whitelistMintEndTimestamp &&
-            newPublicMintEndTimestamp >= whitelistMintStartTimestamp &&
-            newPublicMintEndTimestamp <= whitelistMintEndTimestamp) {
+        if ((newPublicMintStartTimestamp >= whitelistMintStartTimestamp &&
+            newPublicMintStartTimestamp <= whitelistMintEndTimestamp) ||
+            (newPublicMintEndTimestamp >= whitelistMintStartTimestamp &&
+            newPublicMintEndTimestamp <= whitelistMintEndTimestamp) ||
+            (newPublicMintStartTimestamp <= whitelistMintStartTimestamp &&
+            newPublicMintEndTimestamp >= whitelistMintEndTimestamp)) {
             revert InvalidInput();
         }
 
-        if (newPublicMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
-            newPublicMintStartTimestamp <= dutchAuctionMintEndTimestamp &&
-            newPublicMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
-            newPublicMintEndTimestamp <= dutchAuctionMintEndTimestamp) {
+        if ((newPublicMintStartTimestamp >= dutchAuctionMintStartTimestamp &&
+            newPublicMintStartTimestamp <= dutchAuctionMintEndTimestamp) ||
+            (newPublicMintEndTimestamp >= dutchAuctionMintStartTimestamp &&
+            newPublicMintEndTimestamp <= dutchAuctionMintEndTimestamp) ||
+            (newPublicMintStartTimestamp <= dutchAuctionMintStartTimestamp &&
+            newPublicMintEndTimestamp >= dutchAuctionMintEndTimestamp)) {
             revert InvalidInput();
         }
 
@@ -597,17 +612,21 @@ contract TimelessMucha is ERC721AQueryable, ITimelessMucha, IPaper, TimelessMuch
             revert InvalidInput();
         }
 
-        if (newDutchAuctionMintStartTimestamp >= whitelistMintStartTimestamp &&
-            newDutchAuctionMintStartTimestamp <= whitelistMintEndTimestamp &&
-            newDutchAuctionMintEndTimestamp >= whitelistMintStartTimestamp &&
-            newDutchAuctionMintEndTimestamp <= whitelistMintEndTimestamp) {
+        if ((newDutchAuctionMintStartTimestamp >= publicMintStartTimestamp &&
+            newDutchAuctionMintStartTimestamp <= publicMintEndTimestamp) ||
+            (newDutchAuctionMintEndTimestamp >= publicMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp <= publicMintEndTimestamp) ||
+            (newDutchAuctionMintStartTimestamp <= publicMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp >= publicMintEndTimestamp)) {
             revert InvalidInput();
         }
 
-        if (newDutchAuctionMintStartTimestamp >= publicMintStartTimestamp &&
-            newDutchAuctionMintStartTimestamp <= publicMintEndTimestamp &&
-            newDutchAuctionMintEndTimestamp >= publicMintStartTimestamp &&
-            newDutchAuctionMintEndTimestamp <= publicMintEndTimestamp) {
+        if ((newDutchAuctionMintStartTimestamp >= whitelistMintStartTimestamp &&
+            newDutchAuctionMintStartTimestamp <= whitelistMintEndTimestamp) ||
+            (newDutchAuctionMintEndTimestamp >= whitelistMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp <= whitelistMintEndTimestamp) ||
+            (newDutchAuctionMintStartTimestamp <= whitelistMintStartTimestamp &&
+            newDutchAuctionMintEndTimestamp >= whitelistMintEndTimestamp)) {
             revert InvalidInput();
         }
 
