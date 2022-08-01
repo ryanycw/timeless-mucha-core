@@ -22,7 +22,7 @@ interface ITimelessMucha {
    // User Execution Functions //
   //////////////////////////////
 
-  // Mint Giveaway Genesis Papers to an address by owner.
+  // Mint giveaway genesis papers to an address by owner.
   function mintGiveawayGenesisPapers(address to, uint256 quantities) external;
   // Whitelisted addresses mint specific amount of tokens with signature & maximum mintable amount to verify.
   function mintWhitelistGenesisPapers(uint256 quantities, uint256 maxQuantites, bytes calldata signature) external payable;
