@@ -392,7 +392,7 @@ contract TimelessMucha is
         return isTokenInvalid.get(tokenId);
     }
 
-    /** @dev Retrieve all the the status of whether a token is set to invalid of a giving address.
+    /** @dev Retrieve all the status of whether a token is set to invalid of a giving address.
      * @param owner Address which caller wants to get all of its token valid status
      */
     function getTokenValidStatusByOwner(address owner)
