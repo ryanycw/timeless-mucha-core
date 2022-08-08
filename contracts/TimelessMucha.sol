@@ -645,7 +645,7 @@ contract TimelessMucha is
         dutchAuctionMintStartTimestamp = newDutchAuctionMintStartTimestamp;
         dutchAuctionMintEndTimestamp = newDutchAuctionMintEndTimestamp;
 
-        emit PublicMintPhaseSet(newDutchAuctionMintStartTimestamp, newDutchAuctionMintEndTimestamp);
+        emit DutchAuctionMintPhaseSet(newDutchAuctionMintStartTimestamp, newDutchAuctionMintEndTimestamp);
     }
 
     /** @dev Set the sales-related information of the dutch aution mint phase
