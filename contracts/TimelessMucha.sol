@@ -161,7 +161,9 @@ contract TimelessMucha is
         override(ERC721A, ERC2981)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return 
+            ERC721A.supportsInterface(interfaceId) || 
+            ERC2981.supportsInterface(interfaceId);
     }
 
       //////////////////////////////
